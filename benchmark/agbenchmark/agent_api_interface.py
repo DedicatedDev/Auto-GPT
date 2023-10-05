@@ -58,6 +58,18 @@ async def copy_agent_artifacts_into_temp_folder(api_instance, task_id):
     artifacts = await api_instance.list_agent_task_artifacts(task_id=task_id)
     
     for artifact in artifacts.artifacts:
+        # current absolute path of the directory of the file
+        directory_location = pathlib.Path(TMP_FOLDER_ABS_PATH)
+        if artifact.relative_path:
+            path = (
+                artifact.relative_path
+                if not artifact.relative_path.startswith("/")
+                else artifact.relative_path[1:]
+            )
+            directory_location = pathlib.Path(
+                os.path.dirname(directory_location / path)
+            )
+            LOG.info(f"Creating directory {directory_location}")
         directory_location.mkdir(parents=True, exist_ok=True)
 
         file_path = directory_location / artifact.file_name
