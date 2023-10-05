@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 from random import randint
 from typing import Any, Dict, List
+import uuid
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -50,25 +51,37 @@ def find_artifact_by_id(artifact_id: str) -> Dict[str, Any]:
 
 @app.post("/agent/tasks/{task_id}/artifacts")
 async def upload_file(
-    task_id: str, file: UploadFile = File(), relative_path: str = Form("")
+    task_id: str, file: Annotated[UploadFile, File()], relative_path: str = Form("")
 ) -> Dict[str, Any]:
-    logger.info(f"Uploading file for task_id: {task_id} with relative path: {relative_path}")
+    logger.info(
+        "Uploading file for task_id: %s with relative path: %s", task_id, relative_path
+    )
+    absolute_directory_path = Path(__file__).parent.absolute()
+    save_path = (
+        absolute_directory_path
+        / "agent/gpt-engineer"
+        / "projects/my-new-project/workspace"
+    )
+
+    # Generate a unique artifact_id using UUID
+    artifact_id = str(uuid.uuid4())
 
     artifact_data = await file.read()
-    artifact = Artifact(
-        binary=artifact_data,
-        relative_path=relative_path,
-        file_name=file.filename,
-        artifact_id=generate_artifact_id(),
+    artifacts.append(
+        {
+            "binary": artifact_data,
+            "relative_path": relative_path,
+            "file_name": file.filename,
+            "artifact_id": artifact_id,
+        }
     )
-    artifacts.append(artifact.dict())
 
+    print(artifacts)
     return {
-        "artifact_id": artifact.artifact_id,
-        "file_name": artifact.file_name,
-        "relative_path": artifact.relative_path,
+        "artifact_id": artifact_id,
+        "file_name": "file_name",
+        "relative_path": "relative_path",
     }
-
 
 @app.get("/agent/tasks/{task_id}/artifacts")
 async def get_files() -> List[Dict[str, Any]]:
