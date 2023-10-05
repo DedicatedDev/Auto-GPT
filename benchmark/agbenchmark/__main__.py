@@ -20,7 +20,7 @@ load_dotenv()
 
 BENCHMARK_START_TIME_DT = datetime.now(timezone.utc)
 BENCHMARK_START_TIME = BENCHMARK_START_TIME_DT.strftime("%Y-%m-%dT%H:%M:%S+00:00")
-TEMP_FOLDER_ABS_PATH = Path.cwd() / "agbenchmark_config" / "temp_folder"
+TMP_FOLDER_ABS_PATH = Path.cwd() / "agbenchmark_config" / "temp_folder"
 CHALLENGES_ALREADY_BEATEN = (
     Path.cwd() / "agbenchmark_config" / "challenges_already_beaten.json"
 )
