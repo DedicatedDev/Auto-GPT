@@ -1,20 +1,19 @@
 import io
-import json
 import logging
-import shutil
 from pathlib import Path
 from random import randint
-from typing import Annotated, Any, Dict, List
+from typing import Any, Dict, List
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+
+app = FastAPI()
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
+# Global artifacts store
 artifacts: List[Dict[str, Any]] = []
 
 
@@ -22,39 +21,52 @@ class Task(BaseModel):
     input: str
 
 
+class Artifact(BaseModel):
+    binary: bytes
+    relative_path: str
+    file_name: str
+    artifact_id: str
+
+
+def generate_artifact_id() -> str:
+    """
+    Generate a unique artifact ID.
+    """
+    artifact_id = str(randint(0, 100000))
+    while artifact_id in [artifact["artifact_id"] for artifact in artifacts]:
+        artifact_id = str(randint(0, 100000))
+    return artifact_id
+
+
+def find_artifact_by_id(artifact_id: str) -> Dict[str, Any]:
+    """
+    Retrieve an artifact by its ID.
+    """
+    for artifact in artifacts:
+        if artifact["artifact_id"] == artifact_id:
+            return artifact
+    return {}
+
+
 @app.post("/agent/tasks/{task_id}/artifacts")
 async def upload_file(
-    task_id: str, file: Annotated[UploadFile, File()], relative_path: str = Form("")
+    task_id: str, file: UploadFile = File(), relative_path: str = Form("")
 ) -> Dict[str, Any]:
-    logger.info(
-        "Uploading file for task_id: %s with relative path: %s", task_id, relative_path
-    )
-    absolute_directory_path = Path(__file__).parent.absolute()
-    save_path = (
-        absolute_directory_path
-        / "agent/gpt-engineer"
-        / "projects/my-new-project/workspace"
-    )
-
-    random_string = str(randint(0, 100000))
-    while random_string in artifacts:
-        random_string = str(randint(0, 100000))
+    logger.info(f"Uploading file for task_id: {task_id} with relative path: {relative_path}")
 
     artifact_data = await file.read()
-    artifacts.append(
-        {
-            "binary": artifact_data,
-            "relative_path": relative_path,
-            "file_name": file.filename,
-            "artifact_id": random_string,
-        }
+    artifact = Artifact(
+        binary=artifact_data,
+        relative_path=relative_path,
+        file_name=file.filename,
+        artifact_id=generate_artifact_id(),
     )
+    artifacts.append(artifact.dict())
 
-    print(artifacts)
     return {
-        "artifact_id": random_string,
-        "file_name": "file_name",
-        "relative_path": "relative_path",
+        "artifact_id": artifact.artifact_id,
+        "file_name": artifact.file_name,
+        "relative_path": artifact.relative_path,
     }
 
 
@@ -66,30 +78,22 @@ async def get_files() -> List[Dict[str, Any]]:
 
 @app.get("/agent/tasks/{task_id}/artifacts/{artifact_id}")
 async def get_file(artifact_id: str):
-    for artifact in artifacts:
-        if artifact["artifact_id"] == artifact_id:
-            break
-    else:
-        logger.error("Attempt to access nonexistent artifact with ID: %s", artifact_id)
+    artifact = find_artifact_by_id(artifact_id)
+    if not artifact:
+        logger.error(f"Attempt to access nonexistent artifact with ID: {artifact_id}")
         raise HTTPException(status_code=404, detail="Artifact not found")
 
-    logger.info("Fetching artifact with ID: %s", artifact_id)
-    # find aritifact where artifact_id = artifact_id
-
-    for artifact in artifacts:
-        if artifact["artifact_id"] == artifact_id:
-            return StreamingResponse(
-                io.BytesIO(artifact["binary"]),
-                media_type="application/octet-stream",
-                headers={"Content-Disposition": f"attachment; filename=test.txt"},
-            )
-    # return 404
-    return HTTPException(status_code=404, detail="Artifact not found")
+    logger.info(f"Fetching artifact with ID: {artifact_id}")
+    return StreamingResponse(
+        io.BytesIO(artifact["binary"]),
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": f"attachment; filename={artifact['file_name']}"},
+    )
 
 
 @app.post("/agent/tasks/{task_id}/steps")
 async def create_steps(task_id: str):
-    logger.info("Creating step for task_id: %s", task_id)
+    logger.info(f"Creating step for task_id: {task_id}")
     return {
         "input": "random",
         "additional_input": {},
