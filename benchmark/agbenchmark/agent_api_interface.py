@@ -5,7 +5,7 @@ import pathlib
 import time
 from typing import Any, Dict, Optional
 
-from agbenchmark.__main__ import TEMP_FOLDER_ABS_PATH, UPDATES_JSON_PATH
+from agbenchmark.__main__ import TMP_FOLDER_ABS_PATH, UPDATES_JSON_PATH
 from agbenchmark.agent_interface import get_list_of_file_paths
 from agbenchmark.agent_protocol_client import (
     AgentApi,
@@ -67,7 +67,7 @@ async def copy_agent_artifacts_into_temp_folder(api_instance, task_id):
     artifacts = await api_instance.list_agent_task_artifacts(task_id=task_id)
     for artifact in artifacts.artifacts:
         # current absolute path of the directory of the file
-        directory_location = pathlib.Path(TEMP_FOLDER_ABS_PATH)
+        directory_location = pathlib.Path(TMP_FOLDER_ABS_PATH)
         if artifact.relative_path:
             path = (
                 artifact.relative_path
