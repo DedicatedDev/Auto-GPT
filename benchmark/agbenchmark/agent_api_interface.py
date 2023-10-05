@@ -5,7 +5,7 @@ import pathlib
 import time
 from typing import Any, Dict, Optional
 
-from agbenchmark.__main__ import TEMP_FOLDER_ABS_PATH, UPDATES_JSON_PATH
+from agbenchmark.__main__ import TMP_FOLDER_ABS_PATH, UPDATES_JSON_PATH
 from agbenchmark.agent_interface import get_list_of_file_paths
 from agbenchmark.agent_protocol_client import AgentApi, ApiClient, Configuration, TaskRequestBody
 from agbenchmark.agent_protocol_client.models.step import Step
@@ -58,7 +58,6 @@ async def copy_agent_artifacts_into_temp_folder(api_instance, task_id):
     artifacts = await api_instance.list_agent_task_artifacts(task_id=task_id)
     
     for artifact in artifacts.artifacts:
-        directory_location = determine_directory_location(artifact)
         directory_location.mkdir(parents=True, exist_ok=True)
 
         file_path = directory_location / artifact.file_name
